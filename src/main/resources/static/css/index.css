@@ -1,0 +1,19 @@
+.row {
+    margin-right: -15px;
+    margin-left: -15px;
+}
+.nav-sidebar > .active > a, .nav-sidebar > .active > a:hover, .nav-sidebar > .active > a:focus {
+    color: #fff;
+    background-color: #282c2f;
+}
+.nav-sidebar {
+    margin-right: -21px;
+    margin-bottom: 20px;
+    margin-left: -20px;
+}
+.black {
+    color: #1c1e1f;
+}
+.font-size-18 {
+    font-size: 18px;
+}
