@@ -25,7 +25,7 @@
         <div class="row">
             <div class="col-sm-3 col-md-2 sidebar database-list">
                 <div class="database">
-                    <span>Database-List</span>
+                    <h4>Database-List</h4>
                 </div>
                 <ul class="nav nav-sidebar">
                     <li v-for="db in dbs" v-on:click="selectDatabase" v-bind:class="{active: db.id==database.id}">
@@ -45,7 +45,7 @@
             </div>
             <div class="col-sm-3 col-md-2 sidebar db-table-contain table-list">
                 <div class="db-table">
-                    <span>Table-List</span>
+                    <h4>Table-List</h4>
                 </div>
                 <ul class="nav nav-sidebar">
                     <li v-for="t in tables" v-on:click="selectTable" v-bind:class="{active: t.name==table.name}">
