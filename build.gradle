@@ -25,11 +25,18 @@ sourceCompatibility = 1.9
 targetCompatibility = 1.9
 
 repositories {
+    maven {url 'http://maven.aliyun.com/nexus/content/groups/public/'}
     mavenCentral()
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile("org.springframework.boot:spring-boot-devtools")
     compile("org.springframework.boot:spring-boot-starter-web")
-    compile group: 'org.springframework.boot', name: 'spring-boot-devtools', version: '2.0.3.RELEASE'
+    compile("org.springframework.boot:spring-boot-starter-data-jpa")
+    // https://mvnrepository.com/artifact/com.h2database/h2
+    compile group: 'com.h2database', name: 'h2', version: '1.4.196'
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
+
 }
