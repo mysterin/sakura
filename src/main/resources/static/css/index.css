@@ -1,3 +1,6 @@
+html, body, #main, #main .row, #main>.row>div {
+    height: 100%;
+}
 .nav-sidebar > .active > a, .nav-sidebar > .active > a:hover, .nav-sidebar > .active > a:focus {
     color: #333333;
 }
@@ -7,10 +10,14 @@
     margin-left: -15px;
 }
 .database {
+    height: 8%;
+    min-height: 60px;
     background-color: #CCC0FF;
     margin-bottom: 1px;
 }
 .db-table {
+    height: 8%;
+    min-height: 60px;
     background-color: #99CCFF;
     margin-bottom: 1px;
 }
@@ -26,7 +33,7 @@
     font-weight: bold;
 }
 .db-table-contain {
-    background-color: #eaeaea;
+    background-color: #fcfcfc;
 }
 .black {
     color: #1c1e1f;
@@ -43,32 +50,41 @@
 .table-data {
     padding-top: 10px;
 }
+.database-list>ul, .table-list>ul {
+    overflow-y: auto;
+    max-height: 86%;
+}
 .database-list>ul>li>a {
     height: 38px;
     padding-top: 6px;
     padding-bottom: 6px;
     line-height: 24px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.database-list>ul>li.active>a {
+.database-list>ul>li>a.active {
     background-color: #ccccff;
     font-weight: bold;
+    color: #222;
 }
 .table-list>ul>li>a {
     height: 38px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .table-list>ul>li.active>a {
     background-color: #BBDDFF;
     font-weight: bold;
 }
 .database-list .delete {
-    position: relative;
-    top: 0;
+    position: absolute;
+    top: 6px;
     padding-top: 4px;
     padding-bottom: 4px;
-    width: 50px;
+    width: 46px;
     height: 26px;
     line-height: 4px;
-    left: 70%;
+    right: 10px;
     border: 1px solid rgba(27, 31, 35, 0.2);
     border-radius: 0px;
     border-color: #cb2431;
@@ -84,4 +100,13 @@
 }
 .database-list>ul>li>a:hover .delete {
     display: inline-block;
+}
+.alert.fade {
+    display: none;
+}
+.alert.show {
+    display: block;
+    transition: opacity .15s linear;
+    opacity: 1;
+    word-wrap: break-word;
 }

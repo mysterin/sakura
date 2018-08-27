@@ -1,5 +1,8 @@
 package com.mysterin.sakura.response;
 
+/**
+ * @author linxb
+ */
 public enum Code {
     SUCCESS(0),
     UNKNOW_ERROR(-1),

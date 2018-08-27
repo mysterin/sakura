@@ -15,6 +15,9 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * @author linxb
+ */
 @Service
 public class DatabaseServiceImpl implements DatabaseService {
 
@@ -24,22 +27,42 @@ public class DatabaseServiceImpl implements DatabaseService {
     @Autowired
     private JdbcTemplates jdbcTemplates;
 
+    /**
+     * 读取数据库连接
+     * @return
+     */
     @Override
     public List<DatabaseModel> getDatavaseList() {
         List<DatabaseModel> list = databaseDao.findAll();
         return list;
     }
 
+    /**
+     * 根据 id 读取数据库连接
+     * @param id
+     * @return
+     */
     @Override
     public Optional<DatabaseModel> getDatabaseModel(Long id) {
         return databaseDao.findById(id);
     }
 
+    /**
+     * 保存数据库连接
+     * @param databaseModel
+     */
     @Override
     public void saveDatabase(DatabaseModel databaseModel) {
         databaseDao.save(databaseModel);
     }
 
+    /**
+     * 测试数据库连接
+     * @param databaseModel
+     * @throws ClassNotFoundException
+     * @throws SQLException
+     * @throws SakuraException
+     */
     @Override
     public void testDatabase(DatabaseModel databaseModel) throws ClassNotFoundException, SQLException, SakuraException {
         Class.forName(DataSourceUtils.driverName(databaseModel));
@@ -50,6 +73,10 @@ public class DatabaseServiceImpl implements DatabaseService {
         connection.close();
     }
 
+    /**
+     * 删除数据库连接
+     * @param id
+     */
     @Override
     public void deleteDatabase(Long id) {
         jdbcTemplates.removeJdbcTemplate(id);

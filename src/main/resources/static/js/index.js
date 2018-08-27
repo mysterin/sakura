@@ -1,3 +1,4 @@
+var app;
 $(function() {
     // 获取数据库列表
     var databaseListUrl = 'database/getList';
@@ -14,7 +15,7 @@ $(function() {
     // 获取数据表数据
     var dataListUrl = 'table/getData';
 
-    var app = new Vue({
+    app = new Vue({
         el: '#main',
         data: {
             dbs: [],
@@ -23,26 +24,43 @@ $(function() {
             tables: [],
             // 当前 table
             table: {},
-            connectInfo: '',
+            connectInfo: {
+                ip: '',
+                port: '',
+                dbName: '',
+                username: '',
+                password: '',
+                code: 0,
+                msg: '',
+                show: false
+            },
             // 当前表字段
             fields: {}
         },
         methods: {
             // 点击数据库
             selectDatabase: function(event) {
-                var id = event.target.id;
+                var id = event.currentTarget.id;
                 this.database = getDatabaseInfo(id);
                 getTableList(id);
             },
             deleteDatabase: function(event) {
-                var id = $(event.target).parent().attr('id');
+                var id = $(event.currentTarget).parent().attr('id');
                 deleteDatabase(id);
             },
             // 点击表
             selectTable: function(event) {
-                var tableName = event.target.innerText;
+                var tableName = event.currentTarget.textContent;
                 this.table = getTableInfo(tableName);
                 getTableFieldList(this.database.id, tableName);
+            },
+            // 测试数据库连接
+            testDatabase: function() {
+                testDatabase();
+            },
+            // 保存数据库连接
+            saveDatabase: function() {
+                saveDatabase();
             }
         }
     });
@@ -76,6 +94,71 @@ $(function() {
                 app.tables = response;
             }
         })
+    }
+
+    /**
+     * 删除数据库连接
+     * @param id
+     */
+    function deleteDatabase(id) {
+        $.ajax({
+            type: 'GET',
+            url: deleteDatabaseUrl,
+            data: {
+                id: id
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response && response.code == 0) {
+                    getDatabaseList();
+                }
+            }
+        });
+    }
+
+    /**
+     * 测试数据库连接
+     */
+    function testDatabase() {
+        $.ajax({
+            type: 'POST',
+            url: testDatabaseUrl,
+            data: $('#databaseInfo').serialize(),
+            dataType: 'json',
+            success: function(response) {
+                app.connectInfo.show = true;
+                app.connectInfo.code = response.code;
+                app.connectInfo.msg = error(response);
+            }
+        });
+    }
+
+    /**
+     * 保存数据库连接
+     */
+    function saveDatabase() {
+        $.ajax({
+            type: 'POST',
+            url: saveDatabaseUrl,
+            data: $('#databaseInfo').serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response && response.code == 0) {
+                    app.connectInfo = {
+                        ip: '',
+                        port: '',
+                        dbName: '',
+                        username: '',
+                        password: '',
+                        code: 0,
+                        msg: '',
+                        show: false
+                    };
+                    getDatabaseList();
+                    $('#dbInfo').modal('toggle');
+                }
+            }
+        });
     }
 
     /**
@@ -154,58 +237,6 @@ $(function() {
             columns: columns
         });
     }
-
-    /**
-     * 测试连接
-     */
-    $('#testDatabase').on('click', function() {
-        $.ajax({
-            type: 'POST',
-            url: testDatabaseUrl,
-            data: $('#databaseInfo').serialize(),
-            dataType: 'json',
-            success: function(response) {
-                app.connectInfo = error(response);
-            }
-        })
-    });
-
-    /**
-     * 保存数据库配置
-     */
-    $('#saveDatabase').on('click', function() {
-        $.ajax({
-            type: 'POST',
-            url: saveDatabaseUrl,
-            data: $('#databaseInfo').serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response && response.code == 0) {
-                    getDatabaseList();
-                    $('#dbInfo').modal('toggle');
-                }
-            }
-        })
-    });
-
-    /**
-     * 删除数据库连接
-     */
-    function deleteDatabase(id) {
-        $.ajax({
-            type: 'GET',
-            url: deleteDatabaseUrl,
-            data: {
-                id: id
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response && response.code == 0) {
-                    getDatabaseList();
-                }
-            }
-        })
-    };
 
     /**
      * 错误码处理

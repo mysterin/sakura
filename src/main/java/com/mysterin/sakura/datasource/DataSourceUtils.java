@@ -4,6 +4,9 @@ import com.mysterin.sakura.exception.SakuraException;
 import com.mysterin.sakura.model.DatabaseModel;
 import com.mysterin.sakura.response.Code;
 
+/**
+ * @author linxb
+ */
 public class DataSourceUtils {
 
     /**
@@ -18,7 +21,7 @@ public class DataSourceUtils {
 
         switch (databaseModel.getType()) {
             case "mysql":
-                return "jdbc:mysql://" + databaseModel.getIp() + ":" + port + "/" + name;
+                return "jdbc:mysql://" + databaseModel.getIp() + ":" + port + "/" + name + "?serverTimezone=UTC&characterEncoding=utf-8";
             default:
                 throw new SakuraException(Code.UNSUPPORT_TYPE);
         }

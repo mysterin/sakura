@@ -2,6 +2,10 @@ package com.mysterin.sakura.response;
 
 import java.util.List;
 
+/**
+ * @author linxb
+ * @param <T>
+ */
 public class Page<T> {
 
     private int offset;

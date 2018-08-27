@@ -4,6 +4,9 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
+/**
+ * @author linxb
+ */
 @Entity
 public class DatabaseModel {
     @Id

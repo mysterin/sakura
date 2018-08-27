@@ -1,5 +1,8 @@
 package com.mysterin.sakura.model;
 
+/**
+ * @author linxb
+ */
 public class FieldModel {
 
     private String columnName;

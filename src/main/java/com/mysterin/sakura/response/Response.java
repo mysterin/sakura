@@ -1,5 +1,8 @@
 package com.mysterin.sakura.response;
 
+/**
+ * @author linxb
+ */
 public class Response {
 
     private int code;

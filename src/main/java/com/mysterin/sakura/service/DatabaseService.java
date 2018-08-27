@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * @author linxb
+ */
 public interface DatabaseService {
     List<DatabaseModel> getDatavaseList();
     Optional<DatabaseModel> getDatabaseModel(Long id);

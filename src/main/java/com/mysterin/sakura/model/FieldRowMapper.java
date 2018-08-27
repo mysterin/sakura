@@ -5,6 +5,9 @@ import org.springframework.jdbc.core.RowMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * @author linxb
+ */
 public class FieldRowMapper implements RowMapper<FieldModel> {
 
     @Override

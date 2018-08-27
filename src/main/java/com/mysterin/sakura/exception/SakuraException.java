@@ -2,6 +2,9 @@ package com.mysterin.sakura.exception;
 
 import com.mysterin.sakura.response.Code;
 
+/**
+ * @author linxb
+ */
 public class SakuraException extends Exception {
 
     private Code code;

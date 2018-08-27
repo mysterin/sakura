@@ -10,6 +10,9 @@ import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @author linxb
+ */
 @Component
 public class JdbcTemplates {
 

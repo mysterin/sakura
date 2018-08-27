@@ -8,6 +8,9 @@ import com.mysterin.sakura.response.Page;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author linxb
+ */
 public interface TableService {
 
     List<TableModel> getTableList(Long id) throws SakuraException;
