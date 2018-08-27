@@ -10,14 +10,10 @@ html, body, #main, #main .row, #main>.row>div {
     margin-left: -15px;
 }
 .database {
-    height: 8%;
-    min-height: 60px;
     background-color: #CCC0FF;
     margin-bottom: 1px;
 }
 .db-table {
-    height: 8%;
-    min-height: 60px;
     background-color: #99CCFF;
     margin-bottom: 1px;
 }
