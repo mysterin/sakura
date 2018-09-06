@@ -1,5 +1,6 @@
 package com.mysterin.sakura.service.impl;
 
+import com.google.common.base.Joiner;
 import com.mysterin.sakura.datasource.JdbcTemplates;
 import com.mysterin.sakura.exception.SakuraException;
 import com.mysterin.sakura.model.*;
@@ -9,11 +10,9 @@ import com.mysterin.sakura.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author linxb
@@ -69,12 +68,17 @@ public class TableServiceImpl implements TableService {
      */
     @Override
     public Page<Map<String, Object>> getData(Page page, Long dbId, String tableName) throws SakuraException {
+        List<FieldModel> fields = getTableFieldList(dbId, tableName);
+        String searcheCondition = searchCondition(page.getSearch(), fields);
+
         DatabaseModel databaseModel = getDatabaseModel(dbId);
-        String sql = selectPage(tableName);
-        String countSql = selectCount(tableName);
+        String sql = selectPage(tableName, searcheCondition);
+        String countSql = selectCount(tableName, searcheCondition);
+
         JdbcTemplate jdbcTemplate = jdbcTemplates.getJdbcTemplate(databaseModel);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, new Object[]{page.getOffset(), page.getLimit()});
         int total = jdbcTemplate.queryForObject(countSql, Integer.class);
+
         page.setRows(rows);
         page.setTotal(total);
         return page;
@@ -95,7 +99,7 @@ public class TableServiceImpl implements TableService {
      * @return
      */
     public String selectTables() {
-        return "select table_name name, table_collation collation from information_schema.tables " +
+        return "select table_name, table_collation from information_schema.tables " +
                 "where table_schema=? and table_type='base table'";
     }
 
@@ -104,8 +108,32 @@ public class TableServiceImpl implements TableService {
      * @return
      */
     public String selectFields() {
-        return "select column_name columnName, data_type dataType from information_schema.columns " +
-                "where table_schema=? and table_name=?";
+        return "select column_name, data_type, character_maximum_length, is_nullable, column_key " +
+                "from information_schema.columns where table_schema=? and table_name=?";
+    }
+
+    /**
+     * 模糊查询条件, 只对 varchar 类型字段查询
+     * @param search
+     * @param fields
+     * @return
+     */
+    public String searchCondition(String search, List<FieldModel> fields) {
+        if (StringUtils.isEmpty(search) || fields.size() == 0) {
+            return "0=0";
+        }
+        String sql = "";
+        for (Iterator<FieldModel> it = fields.iterator(); it.hasNext(); ) {
+            FieldModel field = it.next();
+            if (!"varchar".equals(field.getDataType().toLowerCase())) {
+                continue;
+            }
+            sql += field.getColumnName() + " like '%" + search + "%' ";
+            if (it.hasNext()) {
+                sql += "or ";
+            }
+        }
+        return sql;
     }
 
     /**
@@ -113,8 +141,8 @@ public class TableServiceImpl implements TableService {
      * @param tableName
      * @return
      */
-    public String selectPage(String tableName) {
-        return "select * from " + tableName + " limit ?, ?";
+    public String selectPage(String tableName, String condition) {
+        return "select * from " + tableName + " where " + condition + " limit ?, ?";
     }
 
     /**
@@ -122,7 +150,7 @@ public class TableServiceImpl implements TableService {
      * @param tableName
      * @return
      */
-    public String selectCount(String tableName) {
-        return "select count(*) from " + tableName;
+    public String selectCount(String tableName, String condition) {
+        return "select count(*) from " + tableName + " where " + condition;
     }
 }

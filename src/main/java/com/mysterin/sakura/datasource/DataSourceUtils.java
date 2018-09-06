@@ -21,7 +21,7 @@ public class DataSourceUtils {
 
         switch (databaseModel.getType()) {
             case "mysql":
-                return "jdbc:mysql://" + databaseModel.getIp() + ":" + port + "/" + name + "?serverTimezone=UTC&characterEncoding=utf-8";
+                return "jdbc:mysql://" + databaseModel.getIp() + ":" + port + "/" + name + "?" + databaseModel.getParams();
             default:
                 throw new SakuraException(Code.UNSUPPORT_TYPE);
         }

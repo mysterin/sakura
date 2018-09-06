@@ -18,6 +18,7 @@ public class DatabaseModel {
     private int port;
     private String username;
     private String password;
+    private String params;
 
     public Long getId() {
         return id;
@@ -74,4 +75,13 @@ public class DatabaseModel {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public String getParams() {
+        return params;
+    }
+
+    public void setParams(String params) {
+        this.params = params;
+    }
+
 }
