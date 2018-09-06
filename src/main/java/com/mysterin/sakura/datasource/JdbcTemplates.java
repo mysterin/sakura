@@ -3,6 +3,7 @@ package com.mysterin.sakura.datasource;
 import com.mysterin.sakura.exception.SakuraException;
 import com.mysterin.sakura.model.DatabaseModel;
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,24 @@ import java.util.Map;
 public class JdbcTemplates {
 
     Map<Long, JdbcTemplate> jtMap = new HashMap<>();
+
+    /**
+     * 连接池最小连接数
+     */
+    @Value("${sakura.dataSource.minIdle}")
+    private int minIdle;
+
+    /**
+     * 连接池最大连接数
+     */
+    @Value("${sakura.dataSource.maxPoolSize}")
+    private int maxPoolSize;
+
+    /**
+     * 连接超时时间
+     */
+    @Value("${sakura.dataSource.connectTimeout}")
+    private long connectTimeout;
 
     /**
      * 新增 jdbc 模板
@@ -77,9 +96,9 @@ public class JdbcTemplates {
         dataSource.setUsername(databaseModel.getUsername());
         dataSource.setPassword(databaseModel.getPassword());
         dataSource.setConnectionTestQuery("select 2");
-        dataSource.setMinimumIdle(1);
-        dataSource.setMaximumPoolSize(5);
-        dataSource.setConnectionTimeout(60*1000);
+        dataSource.setMinimumIdle(minIdle);
+        dataSource.setMaximumPoolSize(maxPoolSize);
+        dataSource.setConnectionTimeout(connectTimeout);
         return dataSource;
     }
 }

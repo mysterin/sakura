@@ -8,12 +8,21 @@ import java.util.List;
  */
 public class Page<T> {
 
+    private String search;
     private int offset;
     private int limit;
     private String order;
 
     private int total;
     private List<T> rows;
+
+    public String getSearch() {
+        return search;
+    }
+
+    public void setSearch(String search) {
+        this.search = search;
+    }
 
     public int getOffset() {
         return offset;

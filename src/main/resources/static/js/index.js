@@ -23,19 +23,15 @@ $(function() {
             database: {},
             tables: [],
             // 当前 table
-            table: {},
-            connectInfo: {
-                ip: '',
-                port: '',
-                dbName: '',
-                username: '',
-                password: '',
-                code: 0,
-                msg: '',
-                show: false
+            table: {
+                name: '',
+                collation: '',
+                fields: [],
+                data: {},
+                errorCode: 0,
+                errorMsg: ''
             },
-            // 当前表字段
-            fields: {}
+            connectInfo: initConnectInfo(),
         },
         methods: {
             // 点击数据库
@@ -61,9 +57,48 @@ $(function() {
             // 保存数据库连接
             saveDatabase: function() {
                 saveDatabase();
+            },
+            // 新增数据
+            addData: function() {
+
+            },
+            // 保存数据
+            saveData: function() {
+                var data = $('#tableData').bootstrapTable('getSelections');
+                if (data.length == 0) {
+                    this.table.errorCode = 1;
+                    this.table.errorMsg = '请选择数据行';
+                } else {
+                    this.table.errorCode = 0;
+                    this.table.errorMsg = '保存成功';
+                }
+                setTimeout(function() {app.table.errorMsg = '';}, 3000);
+            },
+            // 删除数据
+            deleteData: function() {
+
             }
         }
     });
+
+    /**
+     * 初始化连接信息
+     * @returns {{ip: string, port: string, dbName: string, username: string, password: string, params: string, code: number, msg: string, show: boolean}}
+     */
+    function initConnectInfo() {
+        var connectInfo = {
+            ip: '',
+            port: '',
+            dbName: '',
+            username: '',
+            password: '',
+            params: '',
+            code: 0,
+            msg: '',
+            show: false
+        }
+        return connectInfo;
+    }
 
     /**
      * 读取数据库列表
@@ -144,16 +179,7 @@ $(function() {
             dataType: 'json',
             success: function(response) {
                 if (response && response.code == 0) {
-                    app.connectInfo = {
-                        ip: '',
-                        port: '',
-                        dbName: '',
-                        username: '',
-                        password: '',
-                        code: 0,
-                        msg: '',
-                        show: false
-                    };
+                    app.connectInfo = initConnectInfo();
                     getDatabaseList();
                     $('#dbInfo').modal('toggle');
                 }
@@ -170,7 +196,7 @@ $(function() {
         $.each(app.dbs, function(k, v) {
             if (v.id == id) {
                 db = v;
-                return;
+                return false;
             }
         });
         return db;
@@ -185,10 +211,17 @@ $(function() {
         $.each(app.tables, function(k, v) {
             if (v.name == name) {
                 t = v;
-                return;
+                return false;
             }
         });
-        return t;
+        return {
+            name: t.name,
+            collation: t.collation,
+            fields: [],
+            data: {},
+            errorCode: 0,
+            errorMsg: ''
+        };
     }
 
     function getTableFieldList(dbId, tableName) {
@@ -201,7 +234,7 @@ $(function() {
             },
             dataType: 'json',
             success: function(response) {
-                app.fields = response;
+                app.table.fields = response;
                 initTable();
             }
 
@@ -212,11 +245,6 @@ $(function() {
      * 初始化表格
      */
     function initTable() {
-        var columns = [];
-        $.each(app.fields, function(k, v) {
-            var obj = {title: v.columnName, field: v.columnName, align: 'center'};
-            columns.push(obj);
-        });
         $('#tableData').bootstrapTable('destroy');
         $('#tableData').bootstrapTable({
             url: dataListUrl,
@@ -229,13 +257,146 @@ $(function() {
             pageList: [10, 25, 50, 100],
             pageNumber: 1,
             pageSize: 10,
+            search: true,
+            showRefresh: true,
+            showColumns: true,
+            toolbar: '#toolbar',
             queryParams: function(params) {
                 params.dbId = app.database.id;
                 params.tableName = app.table.name;
                 return params;
             },
-            columns: columns
+            columns: initColumns(),
+            detailView: true,
+            detailFormatter: function(index, row) {
+                var s = '';
+                $.each(row, function(k, v) {
+                    s += '<strong>' + k + '</strong>: ' + v + '<br>';
+                });
+                return s;
+            },
+            onLoadSuccess: function(data) {
+                app.table.data = data;
+            }
         });
+    }
+
+    /**
+     * 初始化表格标题
+     */
+    function initColumns() {
+        var columns = [{checkbox: true, align: 'center'}];
+        $.each(app.table.fields, function(k, v) {
+            var obj = {
+                title: v.columnName,
+                field: v.columnName,
+                align: 'center'
+            };
+            var dataType = v.dataType.toLowerCase();
+            var validateList = [];
+            // 二进制不需要编辑
+            if (dataType != 'tinyblob' &&
+                dataType != 'blob' &&
+                dataType != 'mediumblob' &&
+                dataType != 'longblob') {
+                obj.editable = {
+                    type: 'text',
+                    title: v.columnName,
+                    validate: function(vv) {
+                        var msg;
+                        $.each(validateList, function(kk, validate) {
+                            msg = validate(vv);
+                            if (msg) {
+                                return false;
+                            }
+                        });
+                        return msg;
+                    }
+                }
+                // 空判断
+                if (!v.nullable) {
+                    var f = function(vv) {
+                        if (!vv) {
+                            return '不允许为空';
+                        }
+                    }
+                    validateList.push(f);
+                }
+            }
+            // 长度判断
+            if (v.characterMaximumLength) {
+                var f = function(vv) {
+                    if (vv && vv.length > v.characterMaximumLength) {
+                        return '长度不能大于' + v.characterMaximumLength;
+                    }
+                }
+                validateList.push(f);
+            }
+            // 整型判断
+            if (dataType == 'tinyint' ||
+                dataType == 'smallint' ||
+                dataType == 'mediumint' ||
+                dataType == 'int' ||
+                dataType == 'bigint') {
+                var f = function(vv) {
+                    if (vv && !isInteger(vv)) {
+                        return '只能输入整数';
+                    }
+                }
+                validateList.push(f);
+            }
+            // 浮点型判断
+            if (dataType == 'float' ||
+                dataType == 'double' ||
+                dataType ==  'real' ||
+                dataType == 'decimal') {
+                var f = function(vv) {
+                    if (vv && !typeof vv == 'number') {
+                        return '只能输入整数或浮点数';
+                    }
+                }
+                validateList.push(f);
+            }
+            // 时间判断
+            if (dataType == 'date') {
+                var f = function(vv) {
+                    var reg = /^\d{4}-\d{2}-\d{2}$/;
+                    if (vv && (!reg.test(vv) || !isDate(vv))) {
+                        return '只能输入格式 yyyy-MM-dd 的日期';
+                    }
+                }
+                validateList.push(f);
+            }
+            if (dataType == 'time') {
+                var f = function(vv) {
+                    var reg = /^\d{2}:\d{2}:\d{2}$/;
+                    if (vv && (!reg.test(vv) || !isDate('2018-09-06 ' + vv))) {
+                        return '只能输入格式 hh:mm:ss 的时间';
+                    }
+                }
+                validateList.push(f);
+            }
+            if (dataType == 'datetime' || dataType == 'timestamp') {
+                var f = function(vv) {
+                    var reg = /^\d{4}-\d{2}-\d{2}\s{1}\d{2}:\d{2}:\d{2}$/;
+                    if (vv && (!reg.test(vv) || !isDate(vv))) {
+                        return '只能输入格式 yyyy-MM-dd hh:mm:ss 的时间';
+                    }
+                }
+                validateList.push(f);
+            }
+            if (dataType == 'year') {
+                var f = function(vv) {
+                    var reg = /^\d{4}$/;
+                    if (vv && !reg.test(vv)) {
+                        return '只能输入格式 yyyy 的年份';
+                    }
+                }
+                validateList.push(f);
+            }
+            columns.push(obj);
+        });
+        return columns;
     }
 
     /**
@@ -258,5 +419,27 @@ $(function() {
             default:
                 return msg && msg != '' ? msg : '未知错误';
         }
+    }
+
+    /**
+     * 判断是否整数
+     * @param obj
+     * @returns {boolean}
+     */
+    function isInteger(obj) {
+        return !isNaN(obj) && obj%1 === 0;
+    }
+
+    /**
+     * 判断是否时间
+     * @param obj
+     * @returns {boolean}
+     */
+    function isDate(obj) {
+        var date = new Date(obj);
+        if (isNaN(date.getDate())) {
+            return false;
+        }
+        return true;
     }
 });

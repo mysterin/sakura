@@ -98,7 +98,7 @@ html, body, #main, #main .row, #main>.row>div {
     display: inline-block;
 }
 .alert.fade {
-    display: none;
+    margin-bottom: 0;
 }
 .alert.show {
     display: block;
