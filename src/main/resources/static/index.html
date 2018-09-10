@@ -27,8 +27,11 @@
                 <div class="database">
                     <h4>Database-List</h4>
                 </div>
+                <div>
+                    <input type="text" class="form-control" v-model="searchDatabase">
+                </div>
                 <ul class="nav nav-sidebar">
-                    <li v-for="db in dbs">
+                    <li v-for="db in selectDatabases">
                         <a href="#" v-bind:id="db.id" v-on:click="selectDatabase" v-bind:class="{active: db.id==database.id}">
                             <span v-bind:title="db.name">{{ db.name }}</span>
                             <button class="btn delete" v-on:click.stop="deleteDatabase">Del</button>
@@ -47,8 +50,11 @@
                 <div class="db-table">
                     <h4>Table-List</h4>
                 </div>
+                <div>
+                    <input type="text" class="form-control" v-model="searchTable">
+                </div>
                 <ul class="nav nav-sidebar">
-                    <li v-for="t in tables" v-on:click="selectTable" v-bind:class="{active: t.name==table.name}">
+                    <li v-for="t in selectTables" v-on:click="selectTable" v-bind:class="{active: t.name==table.name}">
                         <a href="#" v-bind:title="t.name">{{ t.name }}</a>
                     </li>
                 </ul>

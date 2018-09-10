@@ -19,6 +19,7 @@ $(function() {
         el: '#main',
         data: {
             dbs: [],
+            searchDatabase: '',
             // 当前数据库
             database: {},
             tables: [],
@@ -31,7 +32,36 @@ $(function() {
                 errorCode: 0,
                 errorMsg: ''
             },
+            searchTable: '',
             connectInfo: initConnectInfo(),
+        },
+        computed: {
+            selectTables: function() {
+                var searchTable = this.searchTable;
+                if ("" == searchTable) {
+                    return this.tables;
+                }
+                var tbs = [];
+                $.each(this.tables, function(k, v) {
+                    if (v.name.indexOf(searchTable) > -1) {
+                        tbs.push(v);
+                    }
+                });
+                return tbs;
+            },
+            selectDatabases: function() {
+                var searchDatabase = this.searchDatabase;
+                if ("" == searchDatabase) {
+                    return this.dbs;
+                }
+                var dbs = [];
+                $.each(this.dbs, function(k, v) {
+                    if (v.name.indexOf(searchDatabase) > -1) {
+                        dbs.push(v);
+                    }
+                });
+                return dbs;
+            }
         },
         methods: {
             // 点击数据库
