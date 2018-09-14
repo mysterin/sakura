@@ -1,9 +1,9 @@
 package com.mysterin.sakura.service.impl;
 
-import com.google.common.base.Joiner;
 import com.mysterin.sakura.datasource.JdbcTemplates;
 import com.mysterin.sakura.exception.SakuraException;
 import com.mysterin.sakura.model.*;
+import com.mysterin.sakura.response.Code;
 import com.mysterin.sakura.response.Page;
 import com.mysterin.sakura.service.DatabaseService;
 import com.mysterin.sakura.service.TableService;
@@ -82,6 +82,32 @@ public class TableServiceImpl implements TableService {
         page.setRows(rows);
         page.setTotal(total);
         return page;
+    }
+
+    @Override
+    public void updateTableList(Long id, String tableName, List<Map<String, String>> data) throws SakuraException {
+        List<FieldModel> fields = getTableFieldList(id, tableName);
+        String primaryKey = null;
+        for (FieldModel field : fields) {
+            if ("PRI".equals(field.getColumnKey())) {
+                primaryKey = field.getColumnName();
+            }
+        }
+        if (primaryKey == null) {
+            throw new SakuraException(Code.UNSUPPORT_NO_PRIMARY_KEY);
+        }
+        JdbcTemplate jdbcTemplate = getJdbcTemplate(id);
+    }
+
+    /**
+     * 根据 id 获取数据库连接
+     * @param id
+     * @return
+     * @throws SakuraException
+     */
+    public JdbcTemplate getJdbcTemplate(Long id) throws SakuraException {
+        DatabaseModel databaseModel = getDatabaseModel(id);
+        return jdbcTemplates.getJdbcTemplate(databaseModel);
     }
 
     /**

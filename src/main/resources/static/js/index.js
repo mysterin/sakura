@@ -14,6 +14,8 @@ $(function() {
     var tableFieldListUrl = 'table/getFieldList';
     // 获取数据表数据
     var dataListUrl = 'table/getData';
+    // 更新表数据
+    var updateTableListUrl = 'table/update';
 
     app = new Vue({
         el: '#main',
@@ -37,26 +39,28 @@ $(function() {
         },
         computed: {
             selectTables: function() {
-                var searchTable = this.searchTable;
+                var searchTable = this.searchTable.toLowerCase();
                 if ("" == searchTable) {
                     return this.tables;
                 }
                 var tbs = [];
                 $.each(this.tables, function(k, v) {
-                    if (v.name.indexOf(searchTable) > -1) {
+                    var name = v.name.toLowerCase();
+                    if (name.indexOf(searchTable) > -1) {
                         tbs.push(v);
                     }
                 });
                 return tbs;
             },
             selectDatabases: function() {
-                var searchDatabase = this.searchDatabase;
+                var searchDatabase = this.searchDatabase.toLowerCase();
                 if ("" == searchDatabase) {
                     return this.dbs;
                 }
                 var dbs = [];
                 $.each(this.dbs, function(k, v) {
-                    if (v.name.indexOf(searchDatabase) > -1) {
+                    var name = v.name.toLowerCase();
+                    if (name.indexOf(searchDatabase) > -1) {
                         dbs.push(v);
                     }
                 });
@@ -99,8 +103,7 @@ $(function() {
                     this.table.errorCode = 1;
                     this.table.errorMsg = '请选择数据行';
                 } else {
-                    this.table.errorCode = 0;
-                    this.table.errorMsg = '保存成功';
+                    updateTableList(data);
                 }
                 setTimeout(function() {app.table.errorMsg = '';}, 3000);
             },
@@ -254,6 +257,11 @@ $(function() {
         };
     }
 
+    /**
+     * 获取数据表字段信息
+     * @param dbId
+     * @param tableName
+     */
     function getTableFieldList(dbId, tableName) {
         $.ajax({
             type: 'GET',
@@ -268,6 +276,28 @@ $(function() {
                 initTable();
             }
 
+        });
+    }
+
+    /**
+     * 更新数据表数据
+     * @param data
+     */
+    function updateTableList(data) {
+        $.ajax({
+            type: 'POST',
+            url: updateTableListUrl,
+            data: {
+                dbId: app.database.id,
+                tableName: app.table.name,
+                data: data
+            },
+            dataType: 'json',
+            success: function(response) {
+                var msg = error(response);
+                app.table.errorCode = response.code;
+                app.table.errorMsg = msg;
+            }
         })
     }
 
@@ -305,8 +335,9 @@ $(function() {
                 });
                 return s;
             },
-            onLoadSuccess: function(data) {
-                app.table.data = data;
+            responseHandler: function(res) {
+                app.table.data = res;
+                return res;
             }
         });
     }
@@ -328,7 +359,8 @@ $(function() {
             if (dataType != 'tinyblob' &&
                 dataType != 'blob' &&
                 dataType != 'mediumblob' &&
-                dataType != 'longblob') {
+                dataType != 'longblob' &&
+                v.columnKey != 'PRI') {
                 obj.editable = {
                     type: 'text',
                     title: v.columnName,
@@ -389,6 +421,9 @@ $(function() {
             }
             // 时间判断
             if (dataType == 'date') {
+                obj.formatter = function(vv) {
+                    return !vv ? vv : formatDate(new Date(vv), 'yyyy-MM-dd');
+                }
                 var f = function(vv) {
                     var reg = /^\d{4}-\d{2}-\d{2}$/;
                     if (vv && (!reg.test(vv) || !isDate(vv))) {
@@ -398,6 +433,9 @@ $(function() {
                 validateList.push(f);
             }
             if (dataType == 'time') {
+                obj.formatter = function(vv) {
+                    return !vv ? vv : formatDate(new Date(vv), 'hh:mm:ss');
+                }
                 var f = function(vv) {
                     var reg = /^\d{2}:\d{2}:\d{2}$/;
                     if (vv && (!reg.test(vv) || !isDate('2018-09-06 ' + vv))) {
@@ -407,6 +445,9 @@ $(function() {
                 validateList.push(f);
             }
             if (dataType == 'datetime' || dataType == 'timestamp') {
+                obj.formatter = function(vv) {
+                    return !vv ? vv : formatDate(new Date(vv), 'yyyy-MM-dd hh:mm:ss');
+                }
                 var f = function(vv) {
                     var reg = /^\d{4}-\d{2}-\d{2}\s{1}\d{2}:\d{2}:\d{2}$/;
                     if (vv && (!reg.test(vv) || !isDate(vv))) {
@@ -416,6 +457,9 @@ $(function() {
                 validateList.push(f);
             }
             if (dataType == 'year') {
+                obj.formatter = function(vv) {
+                    return !vv ? vv : formatDate(new Date(vv), 'yyyy');
+                }
                 var f = function(vv) {
                     var reg = /^\d{4}$/;
                     if (vv && !reg.test(vv)) {
@@ -441,11 +485,13 @@ $(function() {
         var msg = response.msg;
         switch (response.code) {
             case 0:
-                return '成功';
+                return '操作成功';
             case 400:
                 return '连接失败';
             case 401:
                 return '不支持数据库类型';
+            case 402:
+                return '不支持没有主键的表更新数据';
             default:
                 return msg && msg != '' ? msg : '未知错误';
         }
@@ -471,5 +517,31 @@ $(function() {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 格式化日期
+     * @param date
+     * @param fmt
+     * @returns {*}
+     */
+    function formatDate(date, fmt) {
+        if (/(y+)/.test(fmt)) {
+            fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length));
+        }
+        let o = {
+            'M+': date.getMonth() + 1,
+            'd+': date.getDate(),
+            'h+': date.getHours(),
+            'm+': date.getMinutes(),
+            's+': date.getSeconds()
+        };
+        for (let k in o) {
+            if (new RegExp(`(${k})`).test(fmt)) {
+                let str = o[k] + '';
+                fmt = fmt.replace(RegExp.$1, (RegExp.$1.length === 1) ? str : ('00' + str).substr(str.length));
+            }
+        }
+        return fmt;
     }
 });
