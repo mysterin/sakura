@@ -1,5 +1,6 @@
 package com.mysterin.sakura.service.impl;
 
+import com.google.common.base.Joiner;
 import com.mysterin.sakura.datasource.JdbcTemplates;
 import com.mysterin.sakura.exception.SakuraException;
 import com.mysterin.sakura.model.*;
@@ -8,10 +9,13 @@ import com.mysterin.sakura.response.Page;
 import com.mysterin.sakura.service.DatabaseService;
 import com.mysterin.sakura.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -72,7 +76,7 @@ public class TableServiceImpl implements TableService {
         String searcheCondition = searchCondition(page.getSearch(), fields);
 
         DatabaseModel databaseModel = getDatabaseModel(dbId);
-        String sql = selectPage(tableName, searcheCondition);
+        String sql = selectPage(tableName, fields, searcheCondition);
         String countSql = selectCount(tableName, searcheCondition);
 
         JdbcTemplate jdbcTemplate = jdbcTemplates.getJdbcTemplate(databaseModel);
@@ -87,16 +91,54 @@ public class TableServiceImpl implements TableService {
     @Override
     public void updateTableList(Long id, String tableName, List<Map<String, String>> data) throws SakuraException {
         List<FieldModel> fields = getTableFieldList(id, tableName);
-        String primaryKey = null;
-        for (FieldModel field : fields) {
-            if ("PRI".equals(field.getColumnKey())) {
-                primaryKey = field.getColumnName();
+        String sql = updateTableSql(tableName, fields);
+        JdbcTemplate jdbcTemplate = getJdbcTemplate(id);
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Map<String, String> map = data.get(i);
+                String primaryKey = null;
+                int j = 0;
+                for (; j < fields.size(); j++) {
+                    FieldModel field = fields.get(j);
+                    if ("PRI".equals(field.getColumnKey())) {
+                        primaryKey = field.getColumnName();
+                    }
+                    ps.setString(j + 1, map.get(field.getColumnName()));
+                }
+                if (primaryKey != null) {
+                    ps.setString(j + 1, map.get(primaryKey));
+                }
             }
-        }
+
+            @Override
+            public int getBatchSize() {
+                return data.size();
+            }
+        });
+    }
+
+    @Override
+    public void deleteTableList(Long id, String tableName, List<Map<String, String>> data) throws SakuraException {
+        List<FieldModel> fields = getTableFieldList(id, tableName);
+        String primaryKey = primaryKey(fields);
         if (primaryKey == null) {
             throw new SakuraException(Code.UNSUPPORT_NO_PRIMARY_KEY);
         }
+        String sql = deleteTableSql(tableName, fields);
         JdbcTemplate jdbcTemplate = getJdbcTemplate(id);
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                Map<String, String> map = data.get(i);
+                ps.setString(1, map.get(primaryKey));
+            }
+
+            @Override
+            public int getBatchSize() {
+                return data.size();
+            }
+        });
     }
 
     /**
@@ -167,8 +209,29 @@ public class TableServiceImpl implements TableService {
      * @param tableName
      * @return
      */
-    public String selectPage(String tableName, String condition) {
-        return "select * from " + tableName + " where " + condition + " limit ?, ?";
+    public String selectPage(String tableName, List<FieldModel> fields, String condition) {
+        List<String> fieldList = new ArrayList<>();
+        for (FieldModel field : fields) {
+            String type = field.getDataType();
+            String tableField;
+            String columnName = "`" + field.getColumnName() + "`";
+            switch (type) {
+                case "datetime":
+                    tableField = "DATE_FORMAT(" + columnName + ", '%Y-%m-%d %H:%i:%s') " + columnName;
+                    break;
+                case "date":
+                    tableField = "DATE_FORMAT(" + columnName + ", '%Y-%m-%d) " + columnName;
+                    break;
+                case "time":
+                    tableField = "DATE_FORMAT(" + columnName + ", '%H:%i:%s) " + columnName;
+                    break;
+                default:
+                    tableField = columnName;
+                    break;
+            }
+            fieldList.add(tableField);
+        }
+        return "select " + Joiner.on(",").join(fieldList.toArray()) + " from " + tableName + " where " + condition + " limit ?, ?";
     }
 
     /**
@@ -178,5 +241,57 @@ public class TableServiceImpl implements TableService {
      */
     public String selectCount(String tableName, String condition) {
         return "select count(*) from " + tableName + " where " + condition;
+    }
+
+    /**
+     * 更新表数据 sql
+     * @param tableName
+     * @param fields
+     * @return
+     * @throws SakuraException
+     */
+    public String updateTableSql(String tableName, List<FieldModel> fields) throws SakuraException {
+        String primaryKey = null;
+        List<String> fieldList = new ArrayList<>();
+        for (int i = 0; i < fields.size(); i++) {
+            FieldModel field = fields.get(i);
+            if ("PRI".equals(field.getColumnKey())) {
+                primaryKey = field.getColumnName();
+            }
+            fieldList.add("`" + field.getColumnName() + "`=?");
+        }
+        if (primaryKey == null) {
+            throw new SakuraException(Code.UNSUPPORT_NO_PRIMARY_KEY);
+        }
+        String sql = "update " + tableName + " set " + Joiner.on(",").join(fieldList.toArray()) + " where `" + primaryKey + "`=?";
+        return sql;
+    }
+
+    /**
+     * 删除表数据 sql
+     * @param tableName
+     * @param fields
+     * @return
+     * @throws SakuraException
+     */
+    public String deleteTableSql(String tableName, List<FieldModel> fields) throws SakuraException {
+        String primaryKey = primaryKey(fields);
+        String sql = "delete from " + tableName + " where `" + primaryKey + "`=?";
+        return sql;
+    }
+
+    /**
+     * 获取表主键
+     * @param fields
+     * @return
+     */
+    public String primaryKey(List<FieldModel> fields) {
+        String primaryKey = null;
+        for (FieldModel field : fields) {
+            if ("PRI".equals(field.getColumnKey())) {
+                primaryKey = field.getColumnName();
+            }
+        }
+        return primaryKey;
     }
 }

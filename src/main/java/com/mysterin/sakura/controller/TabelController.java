@@ -7,8 +7,7 @@ import com.mysterin.sakura.response.Page;
 import com.mysterin.sakura.response.Response;
 import com.mysterin.sakura.service.TableService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +16,7 @@ import java.util.Map;
  * @author linxb
  */
 @RestController
-@RequestMapping(value = "table")
+@RequestMapping(value = "{dbId}")
 public class TabelController {
 
     @Autowired
@@ -25,13 +24,13 @@ public class TabelController {
 
     /**
      * 读取表名字
-     * @param id
+     * @param dbId
      * @return
      * @throws SakuraException
      */
-    @RequestMapping(value = "getList")
-    public List<TableModel> getList(Long id) throws SakuraException {
-        return tableService.getTableList(id);
+    @RequestMapping(value = "getTableList")
+    public List<TableModel> getList(@PathVariable Long dbId) throws SakuraException {
+        return tableService.getTableList(dbId);
     }
 
     /**
@@ -41,8 +40,8 @@ public class TabelController {
      * @return
      * @throws SakuraException
      */
-    @RequestMapping(value = "getFieldList")
-    public List<FieldModel> getFieldList(Long dbId, String tableName) throws SakuraException {
+    @RequestMapping(value = "{tableName}/getFieldList")
+    public List<FieldModel> getFieldList(@PathVariable Long dbId, @PathVariable String tableName) throws SakuraException {
         return tableService.getTableFieldList(dbId, tableName);
     }
 
@@ -54,14 +53,20 @@ public class TabelController {
      * @return
      * @throws SakuraException
      */
-    @RequestMapping(value = "getData")
-    public Page<Map<String, Object>> getData(Page page, Long dbId, String tableName) throws SakuraException {
+    @RequestMapping(value = "{tableName}/getData")
+    public Page<Map<String, Object>> getData(Page page, @PathVariable Long dbId, @PathVariable String tableName) throws SakuraException {
         return tableService.getData(page, dbId, tableName);
     }
 
-    @RequestMapping(value = "update")
-    public Response updateTableList(Long dbId, String tableName, List<Map<String, String>> data) throws SakuraException {
-        tableService.updateTableList(dbId, tableName, data);
+    @RequestMapping(value = "{tableName}/update")
+    public Response updateTableList(@PathVariable Long dbId, @PathVariable String tableName, @RequestBody List<Map<String, String>> list) throws SakuraException {
+        tableService.updateTableList(dbId, tableName, list);
+        return Response.success();
+    }
+
+    @RequestMapping(value = "{tableName}/delete")
+    public Response deleteTableList(@PathVariable Long dbId, @PathVariable String tableName, @RequestBody List<Map<String, String>> list) throws SakuraException {
+        tableService.deleteTableList(dbId, tableName, list);
         return Response.success();
     }
 }

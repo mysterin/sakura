@@ -9,13 +9,15 @@ $(function() {
     // 删除数据库连接
     var deleteDatabaseUrl = 'database/delete';
     // 获取数据表列表
-    var tableListUrl = 'table/getList';
+    var tableListUrl = '/getTableList';
     // 获取表字段名
-    var tableFieldListUrl = 'table/getFieldList';
+    var tableFieldListUrl = '/getFieldList';
     // 获取数据表数据
-    var dataListUrl = 'table/getData';
+    var dataListUrl = '/getData';
     // 更新表数据
-    var updateTableListUrl = 'table/update';
+    var updateTableListUrl = '/update';
+    // 删除表数据
+    var deleteTableListUrl = '/delete';
 
     app = new Vue({
         el: '#main',
@@ -109,7 +111,14 @@ $(function() {
             },
             // 删除数据
             deleteData: function() {
-
+                var data = $('#tableData').bootstrapTable('getSelections');
+                if (data.length == 0) {
+                    this.table.errorCode = 1;
+                    this.table.errorMsg = '请选择数据行';
+                } else {
+                    deleteTableList(data);
+                }
+                setTimeout(function() {app.table.errorMsg = '';}, 3000);
             }
         }
     });
@@ -155,8 +164,7 @@ $(function() {
     function getTableList(id) {
         $.ajax({
             type: 'GET',
-            url: tableListUrl,
-            data: {id: id},
+            url: id + tableListUrl,
             dataType: 'json',
             success: function(response) {
                 app.tables = response;
@@ -265,11 +273,7 @@ $(function() {
     function getTableFieldList(dbId, tableName) {
         $.ajax({
             type: 'GET',
-            url: tableFieldListUrl,
-            data: {
-                dbId: dbId,
-                tableName: tableName
-            },
+            url: dbId + '/' + tableName + tableFieldListUrl,
             dataType: 'json',
             success: function(response) {
                 app.table.fields = response;
@@ -286,17 +290,39 @@ $(function() {
     function updateTableList(data) {
         $.ajax({
             type: 'POST',
-            url: updateTableListUrl,
-            data: {
-                dbId: app.database.id,
-                tableName: app.table.name,
-                data: data
-            },
+            url: app.database.id + '/' + app.table.name + updateTableListUrl,
+            contentType: 'application/json',
+            data: JSON.stringify(data),
             dataType: 'json',
             success: function(response) {
                 var msg = error(response);
                 app.table.errorCode = response.code;
                 app.table.errorMsg = msg;
+                if (response.code == 0) {
+                    $('#tableData').bootstrapTable('refresh');
+                }
+            }
+        })
+    }
+
+    /**
+     * 删除表数据
+     * @param data
+     */
+    function deleteTableList(data) {
+        $.ajax({
+            type: 'POST',
+            url: app.database.id + '/' + app.table.name + deleteTableListUrl,
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            dataType: 'json',
+            success: function(response) {
+                var msg = error(response);
+                app.table.errorCode = response.code;
+                app.table.errorMsg = msg;
+                if (response.code == 0) {
+                    $('#tableData').bootstrapTable('refresh');
+                }
             }
         })
     }
@@ -307,7 +333,7 @@ $(function() {
     function initTable() {
         $('#tableData').bootstrapTable('destroy');
         $('#tableData').bootstrapTable({
-            url: dataListUrl,
+            url: app.database.id + '/' + app.table.name + dataListUrl,
             method: 'POST',
             contentType: "application/x-www-form-urlencoded",
             dataType: 'json',
@@ -321,9 +347,8 @@ $(function() {
             showRefresh: true,
             showColumns: true,
             toolbar: '#toolbar',
+            clickToSelect: true,
             queryParams: function(params) {
-                params.dbId = app.database.id;
-                params.tableName = app.table.name;
                 return params;
             },
             columns: initColumns(),

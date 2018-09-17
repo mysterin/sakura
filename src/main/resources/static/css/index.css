@@ -50,6 +50,7 @@ html, body, #main, #main .row, #main>.row>div {
 .database-list>ul, .table-list>ul {
     overflow-y: auto;
     max-height: 86%;
+    margin-top: 10px;
 }
 .database-list>ul>li>a {
     height: 38px;
