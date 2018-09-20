@@ -14,6 +14,8 @@ $(function() {
     var tableFieldListUrl = '/getFieldList';
     // 获取数据表数据
     var dataListUrl = '/getData';
+    // 插入表数据
+    var insertTableDataUrl = '/insert';
     // 更新表数据
     var updateTableListUrl = '/update';
     // 删除表数据
@@ -38,6 +40,8 @@ $(function() {
             },
             searchTable: '',
             connectInfo: initConnectInfo(),
+            insertDataList: [],
+            insertDataErrmsg: []
         },
         computed: {
             selectTables: function() {
@@ -69,6 +73,45 @@ $(function() {
                 return dbs;
             }
         },
+        watch: {
+            'insertDataList': {
+                handler: function(value) {
+                    var fields = this.table.fields;
+                    $.each(fields, function(k, vv) {
+                        var nullable = vv.nullable;
+                        var dataType = vv.dataType;
+                        var maxLength = vv.characterMaximumLength;
+                        var v = app.insertDataList[k];
+                        var msg;
+                        if (!nullable) {
+                            msg = validateNull(v);
+                        }
+                        if (!msg && maxLength) {
+                            msg = validateLength(v, maxLength);
+                        }
+                        if (!msg && isIntegerType(dataType)) {
+                            msg = validateInteger(v);
+                        }
+                        if (!msg && isNumberType(dataType)) {
+                            msg = validateNumber(v);
+                        }
+                        if (!msg && isDateType(dataType)) {
+                            msg = validateDate(v);
+                        }
+                        if (!msg && isTimeType(dataType)) {
+                            msg = validateTime(v);
+                        }
+                        if (!msg && isDateTimeType(dataType)) {
+                            msg = validateDateTime(v);
+                        }
+                        if (!msg && isYearType(dataType)) {
+                            msg = validateYear(v);
+                        }
+                        Vue.set(app.insertDataErrmsg, k, msg);
+                    });
+                }
+            }
+        },
         methods: {
             // 点击数据库
             selectDatabase: function(event) {
@@ -96,7 +139,23 @@ $(function() {
             },
             // 新增数据
             addData: function() {
-
+                $.each(this.table.fields, function(k, v) {
+                    Vue.set(app.insertDataList, k, '');
+                });
+                $('#insertData').modal();
+            },
+            insertData: function() {
+                var validation = true;
+                $.each(this.insertDataErrmsg, function(k, v) {
+                    if (v) {
+                        validation = false;
+                        return false;
+                    }
+                });
+                if (validation) {
+                    var data = $('#insertForm').serialize();
+                    insertDataInfo(this.database.id, this.table.name, data);
+                }
             },
             // 保存数据
             saveData: function() {
@@ -105,7 +164,7 @@ $(function() {
                     this.table.errorCode = 1;
                     this.table.errorMsg = '请选择数据行';
                 } else {
-                    updateTableList(data);
+                    updateTableList(this.database.id, this.table.name, data);
                 }
                 setTimeout(function() {app.table.errorMsg = '';}, 3000);
             },
@@ -116,7 +175,7 @@ $(function() {
                     this.table.errorCode = 1;
                     this.table.errorMsg = '请选择数据行';
                 } else {
-                    deleteTableList(data);
+                    deleteTableList(this.database.id, this.table.name, data);
                 }
                 setTimeout(function() {app.table.errorMsg = '';}, 3000);
             }
@@ -284,13 +343,37 @@ $(function() {
     }
 
     /**
+     * 插入表数据
+     * @param dbId
+     * @param tableName
+     * @param data
+     */
+    function insertDataInfo(dbId, tableName, data) {
+        $.ajax({
+            type: 'POST',
+            url: dbId + '/' + tableName + insertTableDataUrl,
+            data: data,
+            dataType: 'json',
+            success: function(response) {
+                $('#insertData').modal('hide');
+                var msg = error(response);
+                app.table.errorCode = response.code;
+                app.table.errorMsg = msg;
+                if (response.code == 0) {
+                    $('#tableData').bootstrapTable('refresh');
+                }
+            }
+        })
+    }
+
+    /**
      * 更新数据表数据
      * @param data
      */
-    function updateTableList(data) {
+    function updateTableList(dbId, tableName, data) {
         $.ajax({
             type: 'POST',
-            url: app.database.id + '/' + app.table.name + updateTableListUrl,
+            url: dbId + '/' + tableName + updateTableListUrl,
             contentType: 'application/json',
             data: JSON.stringify(data),
             dataType: 'json',
@@ -309,10 +392,10 @@ $(function() {
      * 删除表数据
      * @param data
      */
-    function deleteTableList(data) {
+    function deleteTableList(dbId, tableName, data) {
         $.ajax({
             type: 'POST',
-            url: app.database.id + '/' + app.table.name + deleteTableListUrl,
+            url: dbId + '/' + tableName + deleteTableListUrl,
             contentType: 'application/json',
             data: JSON.stringify(data),
             dataType: 'json',
@@ -373,7 +456,7 @@ $(function() {
     function initColumns() {
         var columns = [{checkbox: true, align: 'center'}];
         $.each(app.table.fields, function(k, v) {
-            var obj = {
+            var column = {
                 title: v.columnName,
                 field: v.columnName,
                 align: 'center'
@@ -386,9 +469,15 @@ $(function() {
                 dataType != 'mediumblob' &&
                 dataType != 'longblob' &&
                 v.columnKey != 'PRI') {
-                obj.editable = {
+                column.editable = {
                     type: 'text',
                     title: v.columnName,
+                    display: function(value) {
+                        if (typeof value == 'object') {
+                            value = JSON.stringify(value);
+                        }
+                        $(this).text(value);
+                    },
                     validate: function(vv) {
                         var msg;
                         $.each(validateList, function(kk, validate) {
@@ -402,100 +491,205 @@ $(function() {
                 }
                 // 空判断
                 if (!v.nullable) {
-                    var f = function(vv) {
-                        if (!vv) {
-                            return '不允许为空';
-                        }
-                    }
-                    validateList.push(f);
+                    validateList.push(validateNull);
                 }
             }
             // 长度判断
             if (v.characterMaximumLength) {
                 var f = function(vv) {
-                    if (vv && vv.length > v.characterMaximumLength) {
-                        return '长度不能大于' + v.characterMaximumLength;
-                    }
+                    return validateLength(vv, v.characterMaximumLength);
                 }
                 validateList.push(f);
             }
             // 整型判断
-            if (dataType == 'tinyint' ||
-                dataType == 'smallint' ||
-                dataType == 'mediumint' ||
-                dataType == 'int' ||
-                dataType == 'bigint') {
-                var f = function(vv) {
-                    if (vv && !isInteger(vv)) {
-                        return '只能输入整数';
-                    }
-                }
-                validateList.push(f);
+            if (isIntegerType(dataType)) {
+                validateList.push(validateInteger);
             }
             // 浮点型判断
-            if (dataType == 'float' ||
-                dataType == 'double' ||
-                dataType ==  'real' ||
-                dataType == 'decimal') {
-                var f = function(vv) {
-                    if (vv && !typeof vv == 'number') {
-                        return '只能输入整数或浮点数';
-                    }
-                }
-                validateList.push(f);
+            if (isNumberType(dataType)) {
+                validateList.push(validateNumber);
             }
             // 时间判断
-            if (dataType == 'date') {
-                obj.formatter = function(vv) {
+            if (isDateType(dataType)) {
+                column.formatter = function(vv) {
                     return !vv ? vv : formatDate(new Date(vv), 'yyyy-MM-dd');
                 }
-                var f = function(vv) {
-                    var reg = /^\d{4}-\d{2}-\d{2}$/;
-                    if (vv && (!reg.test(vv) || !isDate(vv))) {
-                        return '只能输入格式 yyyy-MM-dd 的日期';
-                    }
-                }
-                validateList.push(f);
+                validateList.push(validateDate);
             }
-            if (dataType == 'time') {
-                obj.formatter = function(vv) {
+            if (isTimeType(dataType)) {
+                column.formatter = function(vv) {
                     return !vv ? vv : formatDate(new Date(vv), 'hh:mm:ss');
                 }
-                var f = function(vv) {
-                    var reg = /^\d{2}:\d{2}:\d{2}$/;
-                    if (vv && (!reg.test(vv) || !isDate('2018-09-06 ' + vv))) {
-                        return '只能输入格式 hh:mm:ss 的时间';
-                    }
-                }
-                validateList.push(f);
+                validateList.push(validateTime);
             }
-            if (dataType == 'datetime' || dataType == 'timestamp') {
-                obj.formatter = function(vv) {
+            if (isDateTimeType(dataType)) {
+                column.formatter = function(vv) {
                     return !vv ? vv : formatDate(new Date(vv), 'yyyy-MM-dd hh:mm:ss');
                 }
-                var f = function(vv) {
-                    var reg = /^\d{4}-\d{2}-\d{2}\s{1}\d{2}:\d{2}:\d{2}$/;
-                    if (vv && (!reg.test(vv) || !isDate(vv))) {
-                        return '只能输入格式 yyyy-MM-dd hh:mm:ss 的时间';
-                    }
-                }
-                validateList.push(f);
+                validateList.push(validateDateTime);
             }
-            if (dataType == 'year') {
-                obj.formatter = function(vv) {
+            if (isYearType(dataType)) {
+                column.formatter = function(vv) {
                     return !vv ? vv : formatDate(new Date(vv), 'yyyy');
                 }
-                var f = function(vv) {
-                    var reg = /^\d{4}$/;
-                    if (vv && !reg.test(vv)) {
-                        return '只能输入格式 yyyy 的年份';
-                    }
-                }
-                validateList.push(f);
+                validateList.push(validateYear);
             }
-            columns.push(obj);
+            columns.push(column);
         });
         return columns;
+    }
+
+    /**
+     * 整型类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isIntegerType(dataType) {
+        return dataType == 'tinyint' ||
+            dataType == 'smallint' ||
+            dataType == 'mediumint' ||
+            dataType == 'int' ||
+            dataType == 'bigint';
+    }
+
+    /**
+     * 浮点型类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isNumberType(dataType) {
+        return dataType == 'float' ||
+            dataType == 'double' ||
+            dataType ==  'real' ||
+            dataType == 'decimal';
+    }
+
+    /**
+     * 日期类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isDateType(dataType) {
+        return dataType == 'date';
+    }
+
+    /**
+     * 时间类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isTimeType(dataType) {
+        return dataType == 'time';
+    }
+
+    /**
+     * 日期时间类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isDateTimeType(dataType) {
+        return dataType == 'datetime' || dataType == 'timestamp';
+    }
+
+    /**
+     * 年份类型
+     * @param dataType
+     * @returns {boolean}
+     */
+    function isYearType(dataType) {
+        return dataType == 'year';
+    }
+
+    /**
+     * 验证是否空
+     * @param vv
+     * @returns {string}
+     */
+    function validateNull(vv) {
+        if (!vv) {
+            return '不允许为空';
+        }
+    }
+
+    /**
+     * 验证长度
+     * @param vv
+     * @returns {string}
+     */
+    function validateLength(vv, maxLength) {
+        if (vv && vv.length > maxLength) {
+            return '长度不能大于' + maxLength;
+        }
+    }
+
+    /**
+     * 验证整数
+     * @param vv
+     * @returns {string}
+     */
+    function validateInteger(vv) {
+        if (vv && !isInteger(vv)) {
+            return '只能输入整数';
+        }
+    }
+
+    /**
+     * 验证数字
+     * @param vv
+     * @returns {string}
+     */
+    function validateNumber(vv) {
+        if (vv && !typeof vv == 'number') {
+            return '只能输入整数或浮点数';
+        }
+    }
+
+    /**
+     * 验证日期
+     * @param vv
+     * @returns {string}
+     */
+    function validateDate(vv) {
+        var reg = /^\d{4}-\d{2}-\d{2}$/;
+        if (vv && (!reg.test(vv) || !isDate(vv))) {
+            return '只能输入格式 yyyy-MM-dd 的日期';
+        }
+    }
+
+    /**
+     * 验证时间
+     * @param vv
+     * @returns {string}
+     */
+    function validateTime(vv) {
+        var reg = /^\d{2}:\d{2}:\d{2}$/;
+        if (vv && (!reg.test(vv) || !isDate('2018-09-06 ' + vv))) {
+            return '只能输入格式 hh:mm:ss 的时间';
+        }
+    }
+
+    /**
+     * 验证日期时间
+     * @param vv
+     * @returns {string}
+     */
+    function validateDateTime(vv) {
+        var reg = /^\d{4}-\d{2}-\d{2}\s{1}\d{2}:\d{2}:\d{2}$/;
+        if (vv && (!reg.test(vv) || !isDate(vv))) {
+            return '只能输入格式 yyyy-MM-dd hh:mm:ss 的时间';
+        }
+    }
+
+    /**
+     * 验证年份
+     * @param vv
+     * @returns {string}
+     */
+    function validateYear(vv) {
+        var reg = /^\d{4}$/;
+        if (vv && !reg.test(vv)) {
+            return '只能输入格式 yyyy 的年份';
+        }
     }
 
     /**

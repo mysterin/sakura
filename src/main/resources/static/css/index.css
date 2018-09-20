@@ -101,10 +101,19 @@ html, body, #main, #main .row, #main>.row>div {
 }
 .alert.fade {
     margin-bottom: 0;
+    padding: 0;
 }
 .alert.show {
     display: block;
     transition: opacity .15s linear;
     opacity: 1;
+    word-wrap: break-word;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.errmsg {
+    color: #d14;
+}
+.break-word {
     word-wrap: break-word;
 }

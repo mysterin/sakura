@@ -83,6 +83,9 @@
                 }
 
                 if (_dont_edit_formatter === false) {
+                    if (result) {
+                        result = result.replace(/\"/g, '&quot;');
+                    }
                     return ['<a href="javascript:void(0)"',
                         ' data-name="' + column.field + '"',
                         ' data-pk="' + row[that.options.idField] + '"',

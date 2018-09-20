@@ -8,9 +8,11 @@ import com.mysterin.sakura.response.Code;
 import com.mysterin.sakura.response.Page;
 import com.mysterin.sakura.service.DatabaseService;
 import com.mysterin.sakura.service.TableService;
+import org.hibernate.mapping.Join;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -86,6 +88,28 @@ public class TableServiceImpl implements TableService {
         page.setRows(rows);
         page.setTotal(total);
         return page;
+    }
+
+    @Override
+    public void insertTableData(Long id, String tableName, Map<String, String> data) throws SakuraException {
+        List<FieldModel> fields = getTableFieldList(id, tableName);
+        String sql = insertTableSql(tableName, fields);
+        JdbcTemplate jdbcTemplate = getJdbcTemplate(id);
+        jdbcTemplate.update(sql, new PreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps) throws SQLException {
+                for (int i = 0; i < fields.size(); i++) {
+                    FieldModel field = fields.get(i);
+                    String columnName = field.getColumnName();
+                    boolean nullable = field.isNullable();
+                    String value = data.get(columnName);
+                    if (nullable && StringUtils.isEmpty(value)) {
+                        value = null;
+                    }
+                    ps.setString(i+1, value);
+                }
+            }
+        });
     }
 
     @Override
@@ -241,6 +265,24 @@ public class TableServiceImpl implements TableService {
      */
     public String selectCount(String tableName, String condition) {
         return "select count(*) from " + tableName + " where " + condition;
+    }
+
+    /**
+     * 插入表数据 sql
+     * @param tableName
+     * @param fields
+     * @return
+     */
+    public String insertTableSql(String tableName, List<FieldModel> fields) {
+        List<String> fieldList = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        for (FieldModel field : fields) {
+            fieldList.add("`" + field.getColumnName() + "`");
+            values.add("?");
+        }
+        String sql = "insert into " + tableName + " (" + Joiner.on(",").join(fieldList.toArray()) +
+                ") values (" + Joiner.on(",").join(values.toArray()) + ")";
+        return sql;
     }
 
     /**

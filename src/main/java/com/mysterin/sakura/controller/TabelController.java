@@ -58,6 +58,12 @@ public class TabelController {
         return tableService.getData(page, dbId, tableName);
     }
 
+    @RequestMapping(value = "{tableName}/insert")
+    public Response insertTableData(@PathVariable Long dbId, @PathVariable String tableName, @RequestParam Map<String, String> data) throws SakuraException {
+        tableService.insertTableData(dbId, tableName, data);
+        return Response.success();
+    }
+
     @RequestMapping(value = "{tableName}/update")
     public Response updateTableList(@PathVariable Long dbId, @PathVariable String tableName, @RequestBody List<Map<String, String>> list) throws SakuraException {
         tableService.updateTableList(dbId, tableName, list);
