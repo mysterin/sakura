@@ -33,7 +33,7 @@
                 <ul class="nav nav-sidebar">
                     <li v-for="db in selectDatabases">
                         <a href="#" v-bind:id="db.id" v-on:click="selectDatabase" v-bind:class="{active: db.id==database.id}">
-                            <span v-bind:title="db.name">{{ db.name }}</span>
+                            <span v-bind:title="db.name" data-trigger="hover" data-toggle="popover" data-placement="right" data-content>{{ db.name }}</span>
                             <button class="btn delete" v-on:click.stop="deleteDatabase">Del</button>
                         </a>
                     </li>
