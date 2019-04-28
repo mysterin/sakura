@@ -18,3 +18,5 @@ sakura:
     minIdle: 1
     maxPoolSize: 5
     connectTimeout: 30000
+server:
+  port: 9090

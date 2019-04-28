@@ -84,6 +84,7 @@
 
                 if (_dont_edit_formatter === false) {
                     if (result) {
+                        result = result + '';
                         result = result.replace(/\"/g, '&quot;');
                     }
                     return ['<a href="javascript:void(0)"',
