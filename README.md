@@ -3,7 +3,7 @@
 
 ## 开发用到的相关技术
 * 开发工具： IntelliJ IDEA
-* jdk 版本： jdk9.0.4
+* jdk 版本： jdk1.8
 * 项目构建工具： gradle
 * 项目框架： spring-boot2.0.3
 * 数据库： H2
